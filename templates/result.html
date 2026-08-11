@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Resume Analysis Result</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px #ccc;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+        }
+
+        .score {
+            font-size: 55px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            margin-top: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px #ddd;
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        .skill {
+            display: inline-block;
+            background: #e8f3ff;
+            color: #0066cc;
+            padding: 8px 14px;
+            margin: 5px;
+            border-radius: 20px;
+        }
+
+        .missing {
+            display: inline-block;
+            background: #ffecec;
+            color: #d60000;
+            padding: 8px 14px;
+            margin: 5px;
+            border-radius: 20px;
+        }
+
+        .status {
+            font-weight: bold;
+            margin: 12px 0;
+        }
+
+        .yes {
+            color: green;
+        }
+
+        .no {
+            color: red;
+        }
+
+        .suggestion {
+            background: #fff8df;
+            padding: 12px;
+            margin: 10px 0;
+            border-left: 5px solid #ffc107;
+        }
+
+        .resume-text {
+            background: #f7f7f7;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            text-align: left;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 12px 25px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+
+    <div class="header">
+
+        <h1>AI Resume Analyzer</h1>
+
+        <p>{{ filename }}</p>
+
+        <div class="score">
+            {{ score }}/100
+        </div>
+
+        <p>Resume Score</p>
+
+    </div>
+
+
+    <!-- Skills -->
+
+    <div class="card">
+
+        <h2>🛠 Skills Found</h2>
+
+        {% if skills %}
+
+            {% for skill in skills %}
+
+                <span class="skill">
+                    ✓ {{ skill }}
+                </span>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>No technical skills detected.</p>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- Missing Skills -->
+
+    <div class="card">
+
+        <h2>❌ Skills You Can Add</h2>
+
+        {% for skill in missing_skills %}
+
+            <span class="missing">
+                + {{ skill }}
+            </span>
+
+        {% endfor %}
+
+    </div>
+
+
+    <!-- Resume Sections -->
+
+    <div class="card">
+
+        <h2>📋 Resume Sections</h2>
+
+        <p class="status">
+            Education:
+            {% if education == "Yes" %}
+                <span class="yes">✓ Found</span>
+            {% else %}
+                <span class="no">✗ Missing</span>
+            {% endif %}
+        </p>
+
+        <p class="status">
+            Experience:
+            {% if experience == "Yes" %}
+                <span class="yes">✓ Found</span>
+            {% else %}
+                <span class="no">✗ Missing</span>
+            {% endif %}
+        </p>
+
+        <p class="status">
+            Projects:
+            {% if projects == "Yes" %}
+                <span class="yes">✓ Found</span>
+            {% else %}
+                <span class="no">✗ Missing</span>
+            {% endif %}
+        </p>
+
+        <p class="status">
+            Certifications:
+            {% if certifications == "Yes" %}
+                <span class="yes">✓ Found</span>
+            {% else %}
+                <span class="no">✗ Missing</span>
+            {% endif %}
+        </p>
+
+    </div>
+
+
+    <!-- Suggestions -->
+
+    <div class="card">
+
+        <h2>💡 Improvement Suggestions</h2>
+
+        {% for suggestion in suggestions %}
+
+            <div class="suggestion">
+                {{ suggestion }}
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+
+    <!-- Extracted Text -->
+
+    <div class="card">
+
+        <h2>📄 Extracted Resume Text</h2>
+
+        <div class="resume-text">
+            {{ text }}
+        </div>
+
+    </div>
+
+
+    <center>
+
+        <a href="/" class="button">
+            Analyze Another Resume
+        </a>
+
+    </center>
+
+</div>
+
+</body>
+
+</html>
