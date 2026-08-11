@@ -10,48 +10,93 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+# -----------------------------
+# Job database
+# -----------------------------
+
+JOBS = {
+    "Python Developer": [
+        "Python",
+        "Git",
+        "SQL",
+        "Flask"
+    ],
+
+    "Web Developer": [
+        "HTML",
+        "CSS",
+        "JavaScript"
+    ],
+
+    "Backend Developer": [
+        "Python",
+        "SQL",
+        "Flask",
+        "Git"
+    ],
+
+    "Frontend Developer": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "React"
+    ],
+
+    "Data Scientist": [
+        "Python",
+        "SQL",
+        "Data Science",
+        "Machine Learning"
+    ],
+
+    "Machine Learning Engineer": [
+        "Python",
+        "Machine Learning",
+        "Data Science",
+        "SQL"
+    ],
+
+    "AI Engineer": [
+        "Python",
+        "Machine Learning",
+        "Artificial Intelligence"
+    ],
+
+    "Software Developer": [
+        "Python",
+        "Java",
+        "C++",
+        "SQL",
+        "Git"
+    ]
+}
 
 
-@app.route("/upload", methods=["POST"])
-def upload():
+# -----------------------------
+# Extract PDF text
+# -----------------------------
 
-    file = request.files.get("resume")
-
-    if not file or file.filename == "":
-        return "Please select a PDF file."
-
-    if not file.filename.lower().endswith(".pdf"):
-        return "Only PDF files are allowed."
-
-    filepath = os.path.join(
-        app.config["UPLOAD_FOLDER"],
-        file.filename
-    )
-
-    file.save(filepath)
-
-    # -----------------------------
-    # Extract text from PDF
-    # -----------------------------
+def extract_text(filepath):
 
     reader = PdfReader(filepath)
 
     text = ""
 
     for page in reader.pages:
+
         page_text = page.extract_text()
 
         if page_text:
             text += page_text + "\n"
 
-    text_lower = text.lower()
+    return text
 
-    # -----------------------------
-    # Skills
-    # -----------------------------
+
+# -----------------------------
+# Find skills
+# -----------------------------
+
+def find_skills(text):
 
     skills = [
         "Python",
@@ -67,6 +112,7 @@ def upload():
         "Git",
         "GitHub",
         "Machine Learning",
+        "Artificial Intelligence",
         "Data Science",
         "React",
         "Node.js",
@@ -76,133 +122,120 @@ def upload():
 
     found_skills = []
 
+    text = text.lower()
+
     for skill in skills:
-        if skill.lower() in text_lower:
+
+        if skill.lower() in text:
+
             found_skills.append(skill)
 
-    missing_skills = [
-        skill for skill in skills
-        if skill not in found_skills
-    ]
+    return found_skills
 
-    # -----------------------------
-    # Sections
-    # -----------------------------
 
-    education = "Yes" if any(word in text_lower for word in [
-        "education",
-        "b.tech",
-        "b.e",
-        "bachelor",
-        "degree",
-        "college",
-        "university"
-    ]) else "No"
+# -----------------------------
+# Job recommendation
+# -----------------------------
 
-    experience = "Yes" if any(word in text_lower for word in [
-        "experience",
-        "work experience",
-        "internship",
-        "employment"
-    ]) else "No"
+def recommend_jobs(found_skills):
 
-    projects = "Yes" if any(word in text_lower for word in [
-        "project",
-        "projects"
-    ]) else "No"
+    recommendations = []
 
-    certifications = "Yes" if any(word in text_lower for word in [
-        "certification",
-        "certifications",
-        "certificate"
-    ]) else "No"
+    for job, required_skills in JOBS.items():
 
-    # -----------------------------
-    # Resume Score
-    # -----------------------------
+        matched = []
 
-    score = 0
+        for skill in required_skills:
 
-    # Skills - 40 marks
-    skill_score = min(len(found_skills) * 3, 40)
-    score += skill_score
+            if skill.lower() in [
+                s.lower() for s in found_skills
+            ]:
 
-    # Education - 15 marks
-    if education == "Yes":
-        score += 15
+                matched.append(skill)
 
-    # Experience - 15 marks
-    if experience == "Yes":
-        score += 15
-
-    # Projects - 15 marks
-    if projects == "Yes":
-        score += 15
-
-    # Certifications - 15 marks
-    if certifications == "Yes":
-        score += 15
-
-    # Maximum 100
-    score = min(score, 100)
-
-    # -----------------------------
-    # Suggestions
-    # -----------------------------
-
-    suggestions = []
-
-    if len(found_skills) < 5:
-        suggestions.append(
-            "Add more relevant technical skills."
+        percentage = int(
+            (len(matched) / len(required_skills)) * 100
         )
 
-    if education == "No":
-        suggestions.append(
-            "Add a clear Education section."
-        )
+        recommendations.append({
+            "job": job,
+            "percentage": percentage,
+            "matched": matched
+        })
 
-    if experience == "No":
-        suggestions.append(
-            "Add internships, work experience, or practical experience."
-        )
+    # Highest match first
+    recommendations.sort(
+        key=lambda x: x["percentage"],
+        reverse=True
+    )
 
-    if projects == "No":
-        suggestions.append(
-            "Add 2-3 relevant projects with descriptions."
-        )
+    return recommendations
 
-    if certifications == "No":
-        suggestions.append(
-            "Add relevant certifications or courses."
-        )
 
-    if len(text) < 1000:
-        suggestions.append(
-            "Your resume appears to have limited content. Add more details."
-        )
+# -----------------------------
+# Home page
+# -----------------------------
 
-    if not suggestions:
-        suggestions.append(
-            "Your resume has a good structure. Keep improving your skills and projects."
-        )
+@app.route("/")
+def home():
+
+    return render_template("index.html")
+
+
+# -----------------------------
+# Upload resume
+# -----------------------------
+
+@app.route("/upload", methods=["POST"])
+def upload():
+
+    file = request.files.get("resume")
+
+    if not file or file.filename == "":
+
+        return "Please select a PDF resume."
+
+    if not file.filename.lower().endswith(".pdf"):
+
+        return "Only PDF files are allowed."
+
+    filepath = os.path.join(
+        app.config["UPLOAD_FOLDER"],
+        file.filename
+    )
+
+    file.save(filepath)
+
+    # Extract text
+    text = extract_text(filepath)
+
+    # Find skills
+    found_skills = find_skills(text)
+
+    # Job recommendations
+    recommendations = recommend_jobs(found_skills)
+
+    # Resume score
+    score = min(
+        int((len(found_skills) / 20) * 100),
+        100
+    )
 
     return render_template(
         "result.html",
         filename=file.filename,
         score=score,
         skills=found_skills,
-        missing_skills=missing_skills,
-        education=education,
-        experience=experience,
-        projects=projects,
-        certifications=certifications,
-        suggestions=suggestions,
-        text=text
+        recommendations=recommendations
     )
 
 
+# -----------------------------
+# Start Flask
+# -----------------------------
+
 if __name__ == "__main__":
+
     app.run(
         host="127.0.0.1",
         port=5000,
