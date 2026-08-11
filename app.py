@@ -16,58 +16,36 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 JOBS = {
     "Python Developer": [
-        "Python",
-        "Git",
-        "SQL",
-        "Flask"
+        "Python", "Git", "SQL", "Flask"
     ],
 
     "Web Developer": [
-        "HTML",
-        "CSS",
-        "JavaScript"
+        "HTML", "CSS", "JavaScript"
     ],
 
     "Backend Developer": [
-        "Python",
-        "SQL",
-        "Flask",
-        "Git"
+        "Python", "SQL", "Flask", "Git"
     ],
 
     "Frontend Developer": [
-        "HTML",
-        "CSS",
-        "JavaScript",
-        "React"
+        "HTML", "CSS", "JavaScript", "React"
     ],
 
     "Data Scientist": [
-        "Python",
-        "SQL",
-        "Data Science",
-        "Machine Learning"
+        "Python", "SQL", "Data Science", "Machine Learning"
     ],
 
     "Machine Learning Engineer": [
-        "Python",
-        "Machine Learning",
-        "Data Science",
-        "SQL"
+        "Python", "Machine Learning", "Data Science", "SQL"
     ],
 
     "AI Engineer": [
-        "Python",
-        "Machine Learning",
+        "Python", "Machine Learning",
         "Artificial Intelligence"
     ],
 
     "Software Developer": [
-        "Python",
-        "Java",
-        "C++",
-        "SQL",
-        "Git"
+        "Python", "Java", "C++", "SQL", "Git"
     ]
 }
 
@@ -127,7 +105,6 @@ def find_skills(text):
     for skill in skills:
 
         if skill.lower() in text:
-
             found_skills.append(skill)
 
     return found_skills
@@ -141,16 +118,15 @@ def recommend_jobs(found_skills):
 
     recommendations = []
 
+    found = [skill.lower() for skill in found_skills]
+
     for job, required_skills in JOBS.items():
 
         matched = []
 
         for skill in required_skills:
 
-            if skill.lower() in [
-                s.lower() for s in found_skills
-            ]:
-
+            if skill.lower() in found:
                 matched.append(skill)
 
         percentage = int(
@@ -163,7 +139,6 @@ def recommend_jobs(found_skills):
             "matched": matched
         })
 
-    # Highest match first
     recommendations.sort(
         key=lambda x: x["percentage"],
         reverse=True
@@ -173,7 +148,137 @@ def recommend_jobs(found_skills):
 
 
 # -----------------------------
-# Home page
+# ATS Analysis
+# -----------------------------
+
+def ats_analysis(text):
+
+    text_lower = text.lower()
+
+    # Important resume keywords
+    keywords = [
+        "python",
+        "java",
+        "sql",
+        "html",
+        "css",
+        "javascript",
+        "git",
+        "github",
+        "flask",
+        "machine learning",
+        "artificial intelligence",
+        "data science",
+        "react",
+        "project",
+        "internship",
+        "experience",
+        "education",
+        "skills",
+        "certification"
+    ]
+
+    found_keywords = []
+    missing_keywords = []
+
+    for keyword in keywords:
+
+        if keyword in text_lower:
+            found_keywords.append(keyword)
+        else:
+            missing_keywords.append(keyword)
+
+    # Keyword score
+    keyword_score = int(
+        (len(found_keywords) / len(keywords)) * 60
+    )
+
+    # Section score
+    sections = [
+        "education",
+        "experience",
+        "skills",
+        "project",
+        "certification"
+    ]
+
+    section_count = 0
+
+    for section in sections:
+
+        if section in text_lower:
+            section_count += 1
+
+    section_score = int(
+        (section_count / len(sections)) * 40
+    )
+
+    ats_score = keyword_score + section_score
+
+    return {
+        "score": ats_score,
+        "found_keywords": found_keywords,
+        "missing_keywords": missing_keywords
+    }
+
+
+# -----------------------------
+# ATS suggestions
+# -----------------------------
+
+def get_suggestions(ats_result, text):
+
+    suggestions = []
+
+    if ats_result["score"] < 50:
+
+        suggestions.append(
+            "Your ATS score is low. Add more relevant keywords."
+        )
+
+    if len(ats_result["missing_keywords"]) > 5:
+
+        suggestions.append(
+            "Add technical skills that match your target job."
+        )
+
+    if "experience" not in text.lower():
+
+        suggestions.append(
+            "Add an Experience or Internship section."
+        )
+
+    if "project" not in text.lower():
+
+        suggestions.append(
+            "Add relevant projects with technologies used."
+        )
+
+    if "certification" not in text.lower():
+
+        suggestions.append(
+            "Add relevant certifications."
+        )
+
+    if len(text) < 1000:
+
+        suggestions.append(
+            "Your resume contains limited information. "
+            "Add more details about your projects and achievements."
+        )
+
+    if not suggestions:
+
+        suggestions.append(
+            "Your resume has good ATS compatibility. "
+            "Continue improving your technical skills."
+        )
+
+    return suggestions
+
+
+# -----------------------------
+# Home
 # -----------------------------
 
 @app.route("/")
@@ -183,7 +288,7 @@ def home():
 
 
 # -----------------------------
-# Upload resume
+# Upload
 # -----------------------------
 
 @app.route("/upload", methods=["POST"])
@@ -209,29 +314,34 @@ def upload():
     # Extract text
     text = extract_text(filepath)
 
-    # Find skills
+    # Skills
     found_skills = find_skills(text)
 
-    # Job recommendations
+    # Jobs
     recommendations = recommend_jobs(found_skills)
 
-    # Resume score
-    score = min(
-        int((len(found_skills) / 20) * 100),
-        100
+    # ATS
+    ats_result = ats_analysis(text)
+
+    # Suggestions
+    suggestions = get_suggestions(
+        ats_result,
+        text
     )
 
     return render_template(
         "result.html",
         filename=file.filename,
-        score=score,
+        score=ats_result["score"],
         skills=found_skills,
-        recommendations=recommendations
+        recommendations=recommendations,
+        ats=ats_result,
+        suggestions=suggestions
     )
 
 
 # -----------------------------
-# Start Flask
+# Run application
 # -----------------------------
 
 if __name__ == "__main__":
