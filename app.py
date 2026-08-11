@@ -1,58 +1,37 @@
 from flask import Flask, render_template, request
 import os
+
 from pypdf import PdfReader
+from sentence_transformers import SentenceTransformer, util
+
+from job_data import JOBS
+
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "uploads"
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-# -----------------------------
-# Job database
-# -----------------------------
+# --------------------------------
+# Load AI model
+# --------------------------------
 
-JOBS = {
-    "Python Developer": [
-        "Python", "Git", "SQL", "Flask"
-    ],
+print("Loading AI model...")
 
-    "Web Developer": [
-        "HTML", "CSS", "JavaScript"
-    ],
+model = SentenceTransformer(
+    "all-MiniLM-L6-v2"
+)
 
-    "Backend Developer": [
-        "Python", "SQL", "Flask", "Git"
-    ],
-
-    "Frontend Developer": [
-        "HTML", "CSS", "JavaScript", "React"
-    ],
-
-    "Data Scientist": [
-        "Python", "SQL", "Data Science", "Machine Learning"
-    ],
-
-    "Machine Learning Engineer": [
-        "Python", "Machine Learning", "Data Science", "SQL"
-    ],
-
-    "AI Engineer": [
-        "Python", "Machine Learning",
-        "Artificial Intelligence"
-    ],
-
-    "Software Developer": [
-        "Python", "Java", "C++", "SQL", "Git"
-    ]
-}
+print("AI model loaded successfully!")
 
 
-# -----------------------------
+# --------------------------------
 # Extract PDF text
-# -----------------------------
+# --------------------------------
 
 def extract_text(filepath):
 
@@ -65,244 +44,95 @@ def extract_text(filepath):
         page_text = page.extract_text()
 
         if page_text:
+
             text += page_text + "\n"
 
     return text
 
 
-# -----------------------------
-# Find skills
-# -----------------------------
+# --------------------------------
+# AI Job Recommendation
+# --------------------------------
 
-def find_skills(text):
+def recommend_jobs(resume_text):
 
-    skills = [
-        "Python",
-        "Java",
-        "C",
-        "C++",
-        "HTML",
-        "CSS",
-        "JavaScript",
-        "SQL",
-        "Flask",
-        "Django",
-        "Git",
-        "GitHub",
-        "Machine Learning",
-        "Artificial Intelligence",
-        "Data Science",
-        "React",
-        "Node.js",
-        "AWS",
-        "Docker"
-    ]
+    resume_embedding = model.encode(
+        resume_text,
+        convert_to_tensor=True
+    )
 
-    found_skills = []
+    results = []
 
-    text = text.lower()
+    for job in JOBS:
 
-    for skill in skills:
-
-        if skill.lower() in text:
-            found_skills.append(skill)
-
-    return found_skills
-
-
-# -----------------------------
-# Job recommendation
-# -----------------------------
-
-def recommend_jobs(found_skills):
-
-    recommendations = []
-
-    found = [skill.lower() for skill in found_skills]
-
-    for job, required_skills in JOBS.items():
-
-        matched = []
-
-        for skill in required_skills:
-
-            if skill.lower() in found:
-                matched.append(skill)
-
-        percentage = int(
-            (len(matched) / len(required_skills)) * 100
+        job_embedding = model.encode(
+            job["description"],
+            convert_to_tensor=True
         )
 
-        recommendations.append({
-            "job": job,
+        similarity = util.cos_sim(
+            resume_embedding,
+            job_embedding
+        ).item()
+
+        percentage = int(
+            max(0, min(100, similarity * 100))
+        )
+
+        results.append({
+            "title": job["title"],
             "percentage": percentage,
-            "matched": matched
+            "description": job["description"]
         })
 
-    recommendations.sort(
+    results.sort(
         key=lambda x: x["percentage"],
         reverse=True
     )
 
-    return recommendations
+    return results
 
 
-# -----------------------------
-# ATS Analysis
-# -----------------------------
-
-def ats_analysis(text):
-
-    text_lower = text.lower()
-
-    # Important resume keywords
-    keywords = [
-        "python",
-        "java",
-        "sql",
-        "html",
-        "css",
-        "javascript",
-        "git",
-        "github",
-        "flask",
-        "machine learning",
-        "artificial intelligence",
-        "data science",
-        "react",
-        "project",
-        "internship",
-        "experience",
-        "education",
-        "skills",
-        "certification"
-    ]
-
-    found_keywords = []
-    missing_keywords = []
-
-    for keyword in keywords:
-
-        if keyword in text_lower:
-            found_keywords.append(keyword)
-        else:
-            missing_keywords.append(keyword)
-
-    # Keyword score
-    keyword_score = int(
-        (len(found_keywords) / len(keywords)) * 60
-    )
-
-    # Section score
-    sections = [
-        "education",
-        "experience",
-        "skills",
-        "project",
-        "certification"
-    ]
-
-    section_count = 0
-
-    for section in sections:
-
-        if section in text_lower:
-            section_count += 1
-
-    section_score = int(
-        (section_count / len(sections)) * 40
-    )
-
-    ats_score = keyword_score + section_score
-
-    return {
-        "score": ats_score,
-        "found_keywords": found_keywords,
-        "missing_keywords": missing_keywords
-    }
-
-
-# -----------------------------
-# ATS suggestions
-# -----------------------------
-
-def get_suggestions(ats_result, text):
-
-    suggestions = []
-
-    if ats_result["score"] < 50:
-
-        suggestions.append(
-            "Your ATS score is low. Add more relevant keywords."
-        )
-
-    if len(ats_result["missing_keywords"]) > 5:
-
-        suggestions.append(
-            "Add technical skills that match your target job."
-        )
-
-    if "experience" not in text.lower():
-
-        suggestions.append(
-            "Add an Experience or Internship section."
-        )
-
-    if "project" not in text.lower():
-
-        suggestions.append(
-            "Add relevant projects with technologies used."
-        )
-
-    if "certification" not in text.lower():
-
-        suggestions.append(
-            "Add relevant certifications."
-        )
-
-    if len(text) < 1000:
-
-        suggestions.append(
-            "Your resume contains limited information. "
-            "Add more details about your projects and achievements."
-        )
-
-    if not suggestions:
-
-        suggestions.append(
-            "Your resume has good ATS compatibility. "
-            "Continue improving your technical skills."
-        )
-
-    return suggestions
-
-
-# -----------------------------
+# --------------------------------
 # Home
-# -----------------------------
+# --------------------------------
 
 @app.route("/")
 def home():
 
-    return render_template("index.html")
+    return render_template(
+        "index.html"
+    )
 
 
-# -----------------------------
-# Upload
-# -----------------------------
+# --------------------------------
+# Upload Resume
+# --------------------------------
 
-@app.route("/upload", methods=["POST"])
+@app.route(
+    "/upload",
+    methods=["POST"]
+)
 def upload():
 
-    file = request.files.get("resume")
+    file = request.files.get(
+        "resume"
+    )
 
-    if not file or file.filename == "":
+    if not file:
 
-        return "Please select a PDF resume."
+        return "Please select a resume."
+
+
+    if file.filename == "":
+
+        return "Please select a resume."
+
 
     if not file.filename.lower().endswith(".pdf"):
 
-        return "Only PDF files are allowed."
+        return "Only PDF files are supported."
+
 
     filepath = os.path.join(
         app.config["UPLOAD_FOLDER"],
@@ -311,38 +141,41 @@ def upload():
 
     file.save(filepath)
 
-    # Extract text
-    text = extract_text(filepath)
 
-    # Skills
-    found_skills = find_skills(text)
+    # Extract resume text
 
-    # Jobs
-    recommendations = recommend_jobs(found_skills)
-
-    # ATS
-    ats_result = ats_analysis(text)
-
-    # Suggestions
-    suggestions = get_suggestions(
-        ats_result,
-        text
+    resume_text = extract_text(
+        filepath
     )
+
+
+    if not resume_text.strip():
+
+        return """
+        <h2>Could not extract text from this PDF.</h2>
+        <p>Please upload a text-based PDF resume.</p>
+        <a href="/">Go Back</a>
+        """
+
+
+    # AI recommendations
+
+    recommendations = recommend_jobs(
+        resume_text
+    )
+
 
     return render_template(
         "result.html",
         filename=file.filename,
-        score=ats_result["score"],
-        skills=found_skills,
         recommendations=recommendations,
-        ats=ats_result,
-        suggestions=suggestions
+        resume_text=resume_text
     )
 
 
-# -----------------------------
+# --------------------------------
 # Run application
-# -----------------------------
+# --------------------------------
 
 if __name__ == "__main__":
 

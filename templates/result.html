@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
     <title>AI Resume Analyzer</title>
 
     <style>
-
         body {
             font-family: Arial, sans-serif;
             background: #f4f6f9;
@@ -15,223 +12,123 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 900px;
             margin: auto;
         }
 
-        .card {
+        .header {
             background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 3px 10px #ddd;
+        }
+
+        .job {
+            background: white;
+            margin-top: 20px;
             padding: 25px;
-            margin-bottom: 20px;
             border-radius: 12px;
             box-shadow: 0 3px 10px #ddd;
         }
 
-        h1 {
-            color: #222;
-        }
-
-        .score {
-            font-size: 55px;
+        .match {
+            font-size: 30px;
             font-weight: bold;
             color: #007bff;
         }
 
-        .skill {
-            display: inline-block;
-            padding: 8px 15px;
-            margin: 5px;
-            background: #e7f3ff;
-            color: #0066cc;
-            border-radius: 20px;
+        .bar {
+            width: 100%;
+            height: 15px;
+            background: #eeeeee;
+            border-radius: 10px;
+            margin-top: 10px;
         }
 
-        .keyword {
-            display: inline-block;
-            padding: 7px 12px;
-            margin: 4px;
-            background: #e8f7e8;
-            color: green;
-            border-radius: 15px;
-        }
-
-        .missing {
-            display: inline-block;
-            padding: 7px 12px;
-            margin: 4px;
-            background: #ffe8e8;
-            color: red;
-            border-radius: 15px;
-        }
-
-        .job {
-            border: 1px solid #ddd;
-            padding: 18px;
-            margin-top: 15px;
+        .progress {
+            height: 15px;
+            background: #007bff;
             border-radius: 10px;
         }
 
-        .percentage {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-
-        .suggestion {
-            padding: 12px;
-            margin: 10px 0;
-            background: #fff8dc;
-            border-left: 5px solid #ffc107;
+        .description {
+            color: #555555;
+            line-height: 1.6;
         }
 
         .button {
             display: inline-block;
-            padding: 12px 20px;
+            margin-top: 25px;
+            padding: 12px 25px;
             background: #007bff;
             color: white;
             text-decoration: none;
             border-radius: 6px;
         }
-
     </style>
-
 </head>
 
 <body>
 
 <div class="container">
 
-
-    <!-- Header -->
-
-    <div class="card">
+    <div class="header">
 
         <h1>🤖 AI Resume Analyzer</h1>
 
-        <p>{{ filename }}</p>
+        <h3>{{ filename }}</h3>
 
-        <h2>ATS Resume Score</h2>
-
-        <div class="score">
-            {{ score }}/100
-        </div>
+        <p>AI-powered job recommendation</p>
 
     </div>
 
+    <h2>💼 Recommended Jobs</h2>
 
-    <!-- Skills -->
+    {% if recommendations %}
 
-    <div class="card">
+        {% for job in recommendations %}
 
-        <h2>🛠 Skills Detected</h2>
+        <div class="job">
 
-        {% for skill in skills %}
+            <h2>
+                {{ loop.index }}. {{ job.title }}
+            </h2>
 
-            <span class="skill">
-                ✓ {{ skill }}
-            </span>
+            <div class="match">
+                {{ job.percentage }}% Match
+            </div>
 
-        {% endfor %}
+            <div class="bar">
 
-    </div>
-
-
-    <!-- ATS Keywords -->
-
-    <div class="card">
-
-        <h2>🔑 ATS Keywords Found</h2>
-
-        {% for keyword in ats.found_keywords %}
-
-            <span class="keyword">
-                ✓ {{ keyword }}
-            </span>
-
-        {% endfor %}
-
-    </div>
-
-
-    <!-- Missing Keywords -->
-
-    <div class="card">
-
-        <h2>⚠️ Missing Keywords</h2>
-
-        {% for keyword in ats.missing_keywords %}
-
-            <span class="missing">
-                + {{ keyword }}
-            </span>
-
-        {% endfor %}
-
-    </div>
-
-
-    <!-- Job Recommendations -->
-
-    <div class="card">
-
-        <h2>💼 Recommended Job Roles</h2>
-
-        {% for recommendation in recommendations %}
-
-            <div class="job">
-
-                <h2>
-                    {{ loop.index }}.
-                    {{ recommendation.job }}
-                </h2>
-
-                <div class="percentage">
-
-                    {{ recommendation.percentage }}% Match
-
+                <div
+                    class="progress"
+                    style="width: {{ job.percentage }}%;">
                 </div>
 
-                <p>
-
-                    Matching Skills:
-
-                    {{ recommendation.matched | join(", ") }}
-
-                </p>
-
             </div>
+
+            <p class="description">
+                {{ job.description }}
+            </p>
+
+        </div>
 
         {% endfor %}
 
-    </div>
+    {% else %}
 
+        <div class="job">
+            <h3>No job recommendations found.</h3>
+        </div>
 
-    <!-- Suggestions -->
-
-    <div class="card">
-
-        <h2>💡 AI Improvement Suggestions</h2>
-
-        {% for suggestion in suggestions %}
-
-            <div class="suggestion">
-
-                {{ suggestion }}
-
-            </div>
-
-        {% endfor %}
-
-    </div>
-
+    {% endif %}
 
     <a href="/" class="button">
         Analyze Another Resume
     </a>
 
-
 </div>
 
 </body>
-
 </html>
